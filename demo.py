@@ -11,6 +11,8 @@ It covers:
 3. GUE random matrix statistics (Montgomery-Odlyzko)
 4. Keating-Snaith moment conjectures
 5. De Bruijn-Newman constant
+6. Zero density estimates (Guth-Maynard 2024 breakthrough)
+7. Pair correlation without RH (Baluyot et al. 2025)
 
 Run: python demo.py [--plot] [--range T_MAX]
 """
@@ -33,6 +35,9 @@ from pair_correlation import (gue_pair_correlation, gue_nearest_neighbor_spacing
 from moments import moment_constant, numerical_moment, rmt_factor, arithmetic_factor
 from newman_constant import (phi_function, H_t, find_H_t_zeros,
                              zero_dynamics_ode, compute_lambda_upper_bound)
+from zero_density import (compare_density_bounds, demonstrate_prime_gap_improvement,
+                          estimate_N_sigma, pair_correlation_implies_simplicity,
+                          ingham_exponent, guth_maynard_exponent)
 
 
 def separator(title):
@@ -283,6 +288,58 @@ closely spaced zeros. This is significant because:
           f"Z = {z_fine[min_idx]:.10f}")
 
 
+def demo_zero_density():
+    """Demonstrate zero density estimates including Guth-Maynard."""
+    separator("7. ZERO DENSITY ESTIMATES (GUTH-MAYNARD 2024)")
+    print("""
+Zero density estimates bound N(sigma, T), the number of zeros with
+Re(s) >= sigma. The RH says N(sigma,T) = 0 for sigma > 1/2.
+
+Guth & Maynard (May 2024) proved:
+  N(sigma, T) <= T^{(30/13)(1-sigma) + o(1)}
+
+This is the FIRST improvement at sigma = 3/4 since Ingham (1940) --
+an 84-year gap. Tao called it "a remarkable breakthrough."
+""")
+
+    # Compare exponents at sigma = 3/4
+    s34 = 0.75
+    print(f"At sigma = 3/4:")
+    print(f"  Ingham (1940):       A = 3,      exponent = {ingham_exponent(s34):.4f}")
+    print(f"  Huxley (1972):       A = 12/5,   exponent = {12/5*(1-s34):.4f}")
+    print(f"  Guth-Maynard (2024): A = 30/13,  exponent = {guth_maynard_exponent(s34):.4f}")
+
+    # Prime gap consequences
+    print("\nConsequences for primes in short intervals [x, x + x^theta]:")
+    for r in demonstrate_prime_gap_improvement():
+        year = str(r['year']) if r['year'] else '????'
+        print(f"  {year}  {r['author']:<22s}  theta = {r['theta']:.4f}")
+
+    # Numerical comparison
+    print("\nUpper bounds on N(3/4, T):")
+    print(f"  {'T':>10s}  {'Ingham':>12s}  {'Guth-May':>12s}  {'Improvement':>12s}")
+    print("  " + "-" * 50)
+    for logT in [12, 15, 20, 25]:
+        T = 10.0 ** logT
+        n_old = estimate_N_sigma(0.75, T, 'ingham')
+        n_new = estimate_N_sigma(0.75, T, 'guth_maynard')
+        print(f"  10^{logT:<5d}  {n_old:12.2e}  {n_new:12.2e}  {n_old/n_new:12.1f}x")
+
+    # Baluyot et al.
+    print("\n")
+    separator("8. PAIR CORRELATION WITHOUT RH (BALUYOT ET AL. 2025)")
+    result = pair_correlation_implies_simplicity()
+    print(f"""
+{result['theorem']}
+
+Key innovation: {result['key_innovation']}
+
+Previous: {result['previous']}
+
+Reference: arXiv:{result['arxiv']}
+""")
+
+
 def demo_summary():
     """Print a summary of the evidence."""
     separator("SUMMARY: EVIDENCE FOR THE RIEMANN HYPOTHESIS")
@@ -290,12 +347,16 @@ def demo_summary():
 The methods implemented here represent the major computational
 approaches to the Riemann Hypothesis:
 
-VERIFIED (proven results):
+PROVEN RESULTS:
   * All zeros up to height T ~ 3*10^12 lie on the critical line
     (Platt & Trudgian, 2021) -- over 10^13 zeros verified
-  * The de Bruijn-Newman constant Lambda >= 0 (Rodgers & Tao, 2020),
+  * De Bruijn-Newman constant Lambda >= 0 (Rodgers & Tao, 2020),
     meaning RH is "just barely true" if true at all
   * 0 <= Lambda <= 0.22 (Platt & Trudgian, 2021)
+  * N(sigma,T) <= T^{(30/13)(1-sigma)} (Guth & Maynard, 2024)
+    First improvement at sigma=3/4 in 84 years
+  * PCC => 100% simple zeros on critical line, without RH
+    (Baluyot, Goldston, Suriajaya, Turnage-Butterbaugh, 2025)
 
 STRONG NUMERICAL EVIDENCE:
   * Zero statistics match GUE random matrix predictions to extraordinary
@@ -329,6 +390,7 @@ def main():
     demo_moments()
     demo_newman_constant()
     demo_lehmer()
+    demo_zero_density()
     demo_summary()
 
     elapsed = time.time() - t_start
